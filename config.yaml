@@ -1,0 +1,15 @@
+coindesk:
+  table_fields: ['snap_time', 'ticker', 'high', 'low', 'open', 'close',
+    'weighted_avg', 'base_volume', 'quote_volume']
+  fields:
+    timestamp:
+      cleaning_func: check_epoch
+      mapped_name: snap_time
+    price:
+      cleaning_func: check_float
+      mapped_name: close
+
+poloniex:
+  table_fields: ['dt', 'high', 'low', 'open', 'close', 'weighted_avg',
+    'base_volume', 'quote_volume']
+  test: test
