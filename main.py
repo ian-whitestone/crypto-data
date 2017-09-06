@@ -1,6 +1,7 @@
 import logging as log
 import time
 from CryptoSources import Coindesk
+import postgrez
 
 logname = time.strftime("%Y_%m_%d-%H_%M")
 log.basicConfig(
@@ -16,5 +17,5 @@ results = coindesk.main()
 print (len(results['data']))
 print (results['data'][0])
 
-
-## use postgrez load...
+postgrez.load('crypto', 'hist_prices', data=results['data'],
+                columns=results['fields'])

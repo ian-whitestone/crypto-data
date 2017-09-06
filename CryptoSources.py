@@ -178,12 +178,18 @@ class Coindesk():
 
         field_map = {d['mapped_name']:key
                         for key, d in self.config['fields'].items()}
+
         injection_data = []
-        table_fields = field_map.keys()
+        table_fields = [key for key in field_map.keys()]
+
+        ##TODO: coindesk randomly returns shit outside of specified range,
+        ## delete anything outside of start date/end date
         for record in cleaned_data:
             injection_record = []
             for key in table_fields:
                 injection_record.append(record[field_map[key]])
+            injection_record += [self.ticker, self.source]
             injection_data.append(injection_record)
 
-        return {'fields' table_fields:, 'data': injection_data}
+        table_fields += ['ticker', 'data_source']
+        return {'fields': table_fields, 'data': injection_data}
