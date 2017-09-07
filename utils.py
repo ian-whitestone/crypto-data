@@ -9,9 +9,11 @@ def read_yaml(yaml_file):
 
     Args:
         yaml_file (str): Full path of the yaml file.
+
     Returns:
         data (dict): Dictionary of yaml_file contents.
             None is returned if an error occurs while reading.
+
     Raises:
         Exception: If the yaml_file cannot be opened
     """
@@ -25,7 +27,20 @@ def read_yaml(yaml_file):
 
     return data
 
+def convert_to_epoch(date, date_format='%Y-%m-%d'):
+    """Convert a string date to Epoch GMT time.
 
+    Args:
+        date (str): Date string
+        date_format (str): Date format of the supplied date string. Defaults to
+            '%Y-%m-%d'
+
+    Returns:
+        epoch_time (int): Epoch GMT time
+
+    """
+
+    return int(time.mktime(time.strptime(date, date_format)))
 
 def get_response(url):
     """Retrieve the response from a url.

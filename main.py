@@ -1,6 +1,6 @@
 import logging as log
 import time
-from CryptoSources import Coindesk
+from CryptoSources import Coindesk, Poloniex
 import postgrez
 
 logname = time.strftime("%Y_%m_%d-%H_%M")
@@ -11,8 +11,11 @@ log.basicConfig(
 
 
 
-coindesk = Coindesk('USD', '2017-09-01', '2017-09-02')
-results = coindesk.main()
+# coindesk = Coindesk('USD', '2017-09-01', '2017-09-02')
+# results = coindesk.main()
+
+poloniex = Poloniex('BTC_ETH', '2017-09-01', '2017-09-02')
+results = poloniex.main()
 
 print (len(results['data']))
 print (results['data'][0])

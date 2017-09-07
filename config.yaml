@@ -1,6 +1,4 @@
 coindesk:
-  table_fields: ['snap_time', 'ticker', 'high', 'low', 'open', 'close',
-    'weighted_avg', 'base_volume', 'quote_volume']
   fields:
     timestamp:
       cleaning_func: check_epoch
@@ -10,6 +8,41 @@ coindesk:
       mapped_name: close
 
 poloniex:
-  table_fields: ['dt', 'high', 'low', 'open', 'close', 'weighted_avg',
-    'base_volume', 'quote_volume']
-  test: test
+  tickers:
+    USDT: ['BTC','BCH','ETH','LTC','ETC','XRP','XMR','NXT','ZEC',
+      'DASH','STR','REP','BTC','BCH','ETH','LTC','ETC','XRP','XMR',
+      'NXT','ZEC','DASH','STR','REP']
+    XMR: ['LTC','NXT','ZEC','DASH','BTCD','BCN','MAID','BLK']
+    ETH: ['GNT','BCH','ZRX','ETC','ZEC','LSK','GNO','REP','STEEM']
+    BTC: ['ETH','BCH','LTC','GNT','BTS','XRP','XMR','LSK','ETC',
+      'DGB','ZRX','SYS','DASH','NAV','NXT','ZEC','SC','STRAT','STR',
+      'XEM','STEEM','MAID','FCT','EMC2','ARDR','DOGE','BURST','GAME',
+      'BCN','REP','LBC','BTCD','DCR','VTC','AMP','RADS','EXP','XCP',
+      'PINK','CLAM','VRC','GNO','VIA','SJCX','XBC','FLO','BLK','PPC',
+      'PASC','POT','XVC','NEOS','NEOS','OMNI','NMC','FLDC','RIC','BELA',
+      'NOTE','SBD','SBD','BCY','NXC','NAUT','XON','GRC','BTM','HUC']
+  fields:
+    date:
+      cleaning_func: check_epoch
+      mapped_name: snap_time
+    high:
+      cleaning_func: check_float
+      mapped_name: high
+    low:
+      cleaning_func: check_float
+      mapped_name: low
+    open:
+      cleaning_func: check_float
+      mapped_name: open
+    close:
+      cleaning_func: check_float
+      mapped_name: close
+    volume:
+      cleaning_func: check_float
+      mapped_name: base_volume
+    quoteVolume:
+      cleaning_func: check_float
+      mapped_name: quote_volume
+    weightedAverage:
+      cleaning_func: check_float
+      mapped_name: weighted_avg

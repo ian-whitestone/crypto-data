@@ -2,18 +2,19 @@
 where data is retrieved from.
 
 Each class has a main() method which returns data in the form:
-
-
-
-If a site does not have any of the fields listed above, they will default to
+UPDATE...If a site does not have any of the fields listed above, they will default to
 None in each dictionary.
+
+
+Explain config.yaml parameters:
+In config.yaml, the mapped_names are the corresponding database column names.
 
 https://api.coindesk.com/charts/data?data=close&startdate=2017-08-30&enddate=2017-09-06&exchanges=bpi&dev=1&index=ETH&callback=jQuery112408312843735254813_1504715949334
 https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=BTC-NEO&tickInterval=thirtyMin&_=1504716444688
 https://poloniex.com/public?command=returnChartData&currencyPair=BTC_ETH&start=1483228800&end=9999999999&period=1800
 """
 
-from utils import DataCleaning, get_response, read_yaml
+from utils import DataCleaning, get_response, read_yaml, convert_to_epoch
 import datetime
 import logging as log
 
@@ -44,8 +45,7 @@ def clean_data(data, fields):
         cleaned_data (list): List of dicts, where each dict is
             {'field1': cleaned_val1, ...}
     """
-    log.info('Attempting to clean %s records with the fields setup: %s'
-                % (len(data), fields))
+    log.info('Attempting to clean %s records' % (len(data)))
     cleaned_data = []
     all_fields = fields.keys()
 
@@ -85,8 +85,6 @@ class Coindesk():
         if self.config is None:
             log.error('%s has not been added to ./config.yaml. Exiting...'
                 % self.source)
-        else:
-            log.info('%s config is %s' % (self.source, self.config))
 
         self.base_url = ('https://api.coindesk.com/charts/data?output=json&'
             'data=close&index={0}&startdate={1}&enddate={2}'
@@ -184,6 +182,149 @@ class Coindesk():
 
         ##TODO: coindesk randomly returns shit outside of specified range,
         ## delete anything outside of start date/end date
+        for record in cleaned_data:
+            injection_record = []
+            for key in table_fields:
+                injection_record.append(record[field_map[key]])
+            injection_record += [self.ticker, self.source]
+            injection_data.append(injection_record)
+
+        table_fields += ['ticker', 'data_source']
+        return {'fields': table_fields, 'data': injection_data}
+
+
+
+
+class Poloniex():
+    """Class that can be called to retrieve data from the poloniex site internal
+    APIs.
+    """
+    def __init__(self, ticker_pair, start_date=None, end_date=None,
+        period=1800):
+        """
+        Args:
+            ticker (str): Accepts a ticker pair in the form ticker1_ticker2
+                i.e. BTC_ETH or BTC_LTC.
+            start_date (str): YYYY-mm-dd
+            end_date (str): YYYY-mm-dd
+            period (int): Interval to retrieve quotes for in seconds. Defaults
+                to 30 min (1800s)
+        """
+        self.source = 'poloniex'
+        self.config = CONFIG.get(self.source, None)
+        if self.config is None:
+            log.error('%s has not been added to ./config.yaml. Exiting...'
+                % self.source)
+
+        self.base_url = ('https://poloniex.com/public?command=returnChartData'
+            '&currencyPair=BTC_ETH&start=1498881600&end=9999999999&period=300')
+        self.base_url = ('https://poloniex.com/public?command=returnChartData'
+            '&currencyPair={0}&start={1}&end={2}&period={3}')
+        self.url = None
+
+        self.ticker = ticker_pair
+        self.period = period
+
+        self.date_format = '%Y-%m-%d'
+        self.start_date = start_date
+        self.end_date = end_date
+
+        self._validate_dates()
+        self._convert_dates()
+        self._validate_ticker()
+
+
+        self._build_url()
+        return
+
+    def _validate_dates(self):
+        today_dt = datetime.datetime.today()
+        today = today_dt.strftime(self.date_format)
+        yest_dt = today_dt -datetime.timedelta(1)
+        yest = yest_dt.strftime(self.date_format)
+
+        start_dt_check = DataCleaning.check_date(date_text=self.start_date,
+                            date_format=self.date_format)
+        end_dt_check = DataCleaning.check_date(date_text=self.end_date,
+                            date_format=self.date_format)
+
+        if self.start_date is None or start_dt_check == False:
+            log.warning('Incorrect start date supplied, defaults to %s' % yest)
+            self.start_date = yest
+        elif datetime.datetime.strptime(self.start_date, self.date_format) \
+                > today_dt:
+            self.start_date = yest
+
+        if self.end_date is None or end_dt_check == False:
+            log.warning('Incorrect end date supplied, defaults to %s' % today)
+            self.end_date = today
+        elif datetime.datetime.strptime(self.end_date, self.date_format) \
+                > today_dt:
+            self.end_date = today
+
+        return
+
+    def _convert_dates(self):
+        self.start_date = convert_to_epoch(self.start_date)
+        self.end_date = convert_to_epoch(self.end_date)
+        return
+
+    def _validate_ticker(self):
+        if '_' not in self.ticker:
+            raise Exception('Invalid ticker supplied. Ticker must be in format'
+                             ' ticker1_ticker2')
+        base_ticker = self.ticker.split('_')[0]
+        quote_ticker = self.ticker.split('_')[1]
+
+        if base_ticker not in self.config['tickers'].keys():
+            raise Exception('Base ticker %s not in Poloniex supported base '
+                        'tickers: %s' %
+                        (base_ticker, list(self.config['tickers'].keys())))
+
+        if quote_ticker not in self.config['tickers'][base_ticker]:
+            raise Exception('Quote ticker %s not in Poloniex supported tickers '
+                        'for base ticker %s: %s' % (quote_ticker, base_ticker,
+                        self.config['tickers'][base_ticker]))
+
+        return
+
+    def _build_url(self):
+        self.url = self.base_url.format(self.ticker, self.start_date,
+                                            self.end_date, self.period)
+        return
+
+    def _parse_response(self, resp):
+        """Takes the response object and returns data as a list of dicts, where
+        each dict is in the form {'field1':val1, 'field2':val2} where each field
+        has been defined in the fields key of ./config.yaml.
+        """
+        data = None
+        try:
+            log.debug('Attempting to parse response')
+            data = resp.json()
+        except Exception as e:
+            log.error('Unable to parse response. Error %s' % (e))
+        return data
+
+
+    def main(self):
+        resp = get_response(self.url)
+        if resp is None:
+            log.warning('No response object returned. Exiting...')
+            return
+
+        data = self._parse_response(resp)
+        if data is None:
+            log.warning('No data was parsed from response. Exiting...')
+            return
+
+        cleaned_data = clean_data(data, self.config['fields'])
+
+        field_map = {d['mapped_name']:key
+                        for key, d in self.config['fields'].items()}
+
+        injection_data = []
+        table_fields = [key for key in field_map.keys()]
         for record in cleaned_data:
             injection_record = []
             for key in table_fields:
