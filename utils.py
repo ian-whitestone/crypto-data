@@ -52,14 +52,14 @@ def get_response(url):
         resp (requests.models.Response): Requests response object. If the
             resp.status_code != 200, returns None
     """
-    log.debug('Retrieving response from %s' % url)
+    log.info('Retrieving response from %s' % url)
     resp = None
     try:
         resp = requests.get(url)#, data=json.dumps(r_payload), headers=self.headers)
-        if resp.status_code == 200:
-            return resp
-        else:
-            log.error('Unable to get response, status code %s' % resp.status_code)
+        if resp.status_code != 200:
+            resp = None
+            log.error('Unable to get response, status code %s'
+                        % resp.status_code)
     except Exception as e:
         log.error("Error getting response %s" % e)
 
@@ -157,6 +157,9 @@ class DataCleaning():
         date_text = kwargs['date_text']
         date_format = (kwargs['date_format'] if kwargs['date_format']
                         else '%Y-%m-%d')
+        if isinstance(date_text, str) == False:
+            return False
+
         try:
             datetime.datetime.strptime(date_text, date_format)
             return True
