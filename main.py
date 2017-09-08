@@ -3,7 +3,7 @@ import time
 import argparse
 
 
-from CryptoSources import Coindesk, Poloniex
+from src.CryptoSources import Coindesk, Poloniex
 import postgrez
 
 

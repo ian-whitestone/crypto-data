@@ -29,11 +29,11 @@ results = {
 
 """
 
-from utils import DataCleaning, get_response, read_yaml, convert_to_epoch
+from src.utils import DataCleaning, get_response, read_yaml, convert_to_epoch
 import datetime
 import logging as log
 
-CONFIG = read_yaml('./config.yaml')
+CONFIG = read_yaml('src/config.yaml')
 
 
 def clean_data(data, fields):

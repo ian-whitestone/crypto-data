@@ -24,7 +24,7 @@ def read_yaml(yaml_file):
             data = yaml.safe_load(f)
     except Exception as e:
         log.error('Unable to read file %s. Error: %s' % (yaml_file, e))
-
+        raise
     return data
 
 def convert_to_epoch(date, date_format='%Y-%m-%d'):
