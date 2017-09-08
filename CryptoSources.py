@@ -2,16 +2,31 @@
 where data is retrieved from.
 
 Each class has a main() method which returns data in the form:
-UPDATE...If a site does not have any of the fields listed above, they will default to
-None in each dictionary.
 
+results = {
+    'fields': ['snap_time', 'close', 'ticker', 'source']
+    'data': [
+        ['2017-01-01 22:30', 14.12, 'BTC_ETH', 'poloniex'],
+        ['2017-01-01 22:35', 14.11, 'BTC_ETH', 'poloniex'],
+        ['2017-01-01 22:40', None, 'BTC_ETH', 'poloniex'],
+        ['2017-01-01 22:45', 13.33, 'BTC_ETH', 'poloniex'],
+        ...
+    ]
+}
 
-Explain config.yaml parameters:
-In config.yaml, the mapped_names are the corresponding database column names.
+Where fields is the corresponding column names in the database, and data is
+a list of rows that contain each of those columns. Another example could be:
 
-https://api.coindesk.com/charts/data?data=close&startdate=2017-08-30&enddate=2017-09-06&exchanges=bpi&dev=1&index=ETH&callback=jQuery112408312843735254813_1504715949334
-https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=BTC-NEO&tickInterval=thirtyMin&_=1504716444688
-https://poloniex.com/public?command=returnChartData&currencyPair=BTC_ETH&start=1483228800&end=9999999999&period=1800
+results = {
+    'fields': ['snap_time', 'open', 'close', 'high', 'low', 'ticker', 'source']
+    'data': [
+        ['2017-01-01 22:30', 14.11, 14.12, 14.13, 14.11, 'BTC_ETH', 'poloniex'],
+        ['2017-01-01 22:35', 14.12, 14.11, 14.14, 14.10, 'BTC_ETH', 'poloniex'],
+        ['2017-01-01 22:40', None, None, None, None, 'BTC_ETH', 'poloniex'],
+        ...
+    ]
+}
+
 """
 
 from utils import DataCleaning, get_response, read_yaml, convert_to_epoch
@@ -43,7 +58,8 @@ def clean_data(data, fields):
             the cleaning function.
     Returns:
         cleaned_data (list): List of dicts, where each dict is
-            {'field1': cleaned_val1, ...}
+            {'field1': cleaned_val1, ...}. Note, the field names here are still
+            the original field names from the API response.
     """
     log.info('Attempting to clean %s records' % (len(data)))
     cleaned_data = []
@@ -77,8 +93,9 @@ class Coindesk():
         """
         Args:
             ticker (str): Accepts USD for bitcoin, ETH for ethereum.
-            start_date (str): YYYY-mm-dd
-            end_date (str): YYYY-mm-dd
+            start_date (str): start date in format YYYY-mm-dd. Defaults to
+                yesterday.
+            end_date (str): end date in format YYYY-mm-dd. Defaults to today.
         """
         self.source = 'coindesk'
         self.config = CONFIG.get(self.source, None)
@@ -205,8 +222,9 @@ class Poloniex():
         Args:
             ticker (str): Accepts a ticker pair in the form ticker1_ticker2
                 i.e. BTC_ETH or BTC_LTC.
-            start_date (str): YYYY-mm-dd
-            end_date (str): YYYY-mm-dd
+            start_date (str): start date in format YYYY-mm-dd. Defaults to
+                yesterday.
+            end_date (str): end date in format YYYY-mm-dd. Defaults to today.
             period (int): Interval to retrieve quotes for in seconds. Defaults
                 to 30 min (1800s)
         """
@@ -251,6 +269,7 @@ class Poloniex():
         if self.start_date is None or start_dt_check == False:
             log.warning('Incorrect start date supplied, defaults to %s' % yest)
             self.start_date = yest
+
         elif datetime.datetime.strptime(self.start_date, self.date_format) \
                 > today_dt:
             self.start_date = yest
@@ -316,6 +335,11 @@ class Poloniex():
         data = self._parse_response(resp)
         if data is None:
             log.warning('No data was parsed from response. Exiting...')
+            return
+
+        if isinstance(data, dict) and 'error' in data.keys():
+            log.error('No data returned from response. Error message %s. '
+                        'Exiting...' % data['error'])
             return
 
         cleaned_data = clean_data(data, self.config['fields'])
